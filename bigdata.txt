@@ -12,6 +12,4 @@ statistics
 software engineer
 mathmatics
 data mining
-large dataset
-
- 
+large dataset 
