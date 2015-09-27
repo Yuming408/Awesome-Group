@@ -12,4 +12,8 @@ statistics
 software engineer
 mathmatics
 data mining
-large dataset 
+large dataset
+mongo DB
+sql
+database
+ 

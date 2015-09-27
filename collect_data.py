@@ -13,17 +13,18 @@ import pytz
 import tweepy
 import time
 import urllib3
+import random
 import csv
 
 #Listener Class Override
 class listener(StreamListener):
 
-      def __init__(self, start_time, time_limit, keywords):
+      def __init__(self, start_time, time_limit):
 
           self.time = start_time
           self.limit = time_limit
           self.lastID = None
-          self.regex = re.compile('|'.join(keywords).lower())
+          #self.regex = re.compile('|'.join(keywords).lower())
 
 
       def on_data(self, data):
@@ -48,6 +49,7 @@ class listener(StreamListener):
                      return True
                   user = tweet['user']['name']
                   text = parse_text(tweet['text'])
+                 # print text
 
            #       print user, text
 
@@ -58,8 +60,8 @@ class listener(StreamListener):
                   #     return True
 
                   #### remove the retweets
-                  if tweet['retweeted'] or 'RT @'  in tweet['text']:
-                      return True
+                  # if tweet['retweeted'] or 'RT @'  in tweet['text']:
+                  #     return True
 
                   location = tweet['user']['location']
                   source = tweet['source']
@@ -86,7 +88,7 @@ class listener(StreamListener):
                       return True
 
                   #
-                  with open('mydata.txt', 'a+') as f:
+                  with open('data_geo.txt', 'a+') as f:
                        #f.write('tweetID,creat_time,Coord1,Coord2,Text')
                        print("%s,%s,%f,%f,%s" % (tweetID,tmstr,coords[0],coords[1],text))
                        f.write("%s,%s,%f,%f,%s\n" % (tweetID,tmstr,coords[0],coords[1],text))
@@ -97,6 +99,7 @@ class listener(StreamListener):
                   print 'failed ondata,', str(e)
                   time.sleep(5)
                   pass
+
               except urllib3.exceptions.ReadTimeoutError, e:
                   print 'failed connection,', str(e)
                   time.sleep(5)
@@ -107,7 +110,7 @@ class listener(StreamListener):
 
 
       def on_error(self, status):
-          print status
+          print "error_message:", status
 
 def parse_text(text):
     """
@@ -116,27 +119,8 @@ def parse_text(text):
     Normalize w in wordlist to lowercase
     """
     text = text.encode('latin1', errors='ignore')
-    text = text.rstrip('\n')
-    #text = text.replace('\n', ' ')
-    # wordlist = text.split(" ")
-    # stopWords = ['a', 'able', 'about', 'across', 'after', 'all', 'almost', 'also',
-    #              'am', 'among', 'an', 'and', 'any', 'are', 'as', 'at', 'be',
-    #              'because', 'been', 'but', 'by', 'can', 'cannot', 'could', 'dear',
-    #              'did', 'do', 'does', 'either', 'else', 'ever', 'every', 'for',
-    #              'from', 'get', 'got', 'had', 'has', 'have', 'he', 'her', 'hers',
-    #              'him', 'his', 'how', 'however', 'i', 'if', 'in', 'into', 'is',
-    #              'it', 'its', 'just', 'least', 'let', 'like', 'likely', 'may',
-    #              'me', 'might', 'most', 'must', 'my', 'neither', 'no', 'nor',
-    #              'not', 'of', 'off', 'often', 'on', 'only', 'or', 'other', 'our',
-    #              'own', 'rather', 'said', 'say', 'says', 'she', 'should', 'since',
-    #              'so', 'some', 'than', 'that', 'the', 'their', 'them', 'then',
-    #              'there', 'these', 'they', 'this', 'tis', 'to', 'too', 'twas', 'us',
-    #              've', 'wants', 'was', 'we', 'were', 'what', 'when', 'where', 'which',
-    #              'while', 'who', 'whom', 'why', 'will', 'with', 'would', 'yet',
-    #              'you', 'your']
-    # #wordlist = [w for w in wordlist if (w not in stopWords)]
-    # wordlist = [w for w in wordlist if (len(w) >= 3 and w not in stopWords)]
-    # return " ".join(str(w) for w in wordlist)
+    #text = text.rstrip('\n')
+    text = text.replace('\n', ' ')
     return text
 
 
@@ -145,7 +129,7 @@ def read_csv(file):
     data = []
     with open(file) as f:
         for line in f:
-            data.append(line.strip('\n'))
+            data.append(line.strip('\n').lower())
     return data
 
 def OAuth(consumer_key, consumer_secret, access_token, access_secret):
@@ -171,13 +155,18 @@ def main():
 
     start_time = time.time() #grabs the system time
     time_limit = 10000
-    keywords = read_csv('bigdata.txt')
+    # keywords = read_csv('events.txt')
+    # print keywords
+   # print keywords
     #keywords = ["happy", "sad"]
-    print '|'.join(keywords).lower()
-    keyword_list = ['twitter'] #track list
+   # print '|'.join(keywords).lower()
+   # keyword_list = random.sample(keywords, 300) #track list
+    #keyword_list = [keywords[i] for i in range(400)]
+    #print keyword_list
 
-    twitterStream = Stream(auth, listener(start_time, time_limit, keywords))
-    twitterStream.filter(track=keyword_list, languages=['en'])
+    keywords = ['traffic, accident, disabled vehicle, warning, emergency']
+    twitterStream = Stream(auth, listener(start_time, time_limit))
+    twitterStream.filter(track = keywords, languages=['en'])
 
 if __name__ == '__main__':
     main()
