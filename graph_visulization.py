@@ -70,4 +70,5 @@ for n in nodesets:
                  horizontalalignment='center', \
                  color='red', fontsize=10)
 
+plt.savefig ('usf_msan_network.png')
 plt.show()
