@@ -15,6 +15,7 @@ import time
 import urllib3
 import random
 import csv
+import os
 
 #Listener Class Override
 class listener(StreamListener):
@@ -49,7 +50,7 @@ class listener(StreamListener):
                      return True
                   user = tweet['user']['name']
                   text = parse_text(tweet['text'])
-                 # print text
+                  print text
 
            #       print user, text
 
@@ -78,7 +79,7 @@ class listener(StreamListener):
                   # saveFile.close()
 
                   # append the hourly tweet file
-                  with open('tweets-%s.data' % tmstr.split(':')[0], 'a+') as f:
+                  with open('./data/tweets-%s.data' % tmstr.split(':')[0], 'a+') as f:
                        f.write(data)
 
                   geo = tweet['geo']
@@ -88,7 +89,7 @@ class listener(StreamListener):
                       return True
 
                   #
-                  with open('data_geo.txt', 'a+') as f:
+                  with open('./data/data_geo.txt', 'a+') as f:
                        #f.write('tweetID,creat_time,Coord1,Coord2,Text')
                        print("%s,%s,%f,%f,%s" % (tweetID,tmstr,coords[0],coords[1],text))
                        f.write("%s,%s,%f,%f,%s\n" % (tweetID,tmstr,coords[0],coords[1],text))
@@ -155,16 +156,20 @@ def main():
 
     start_time = time.time() #grabs the system time
     time_limit = 10000
-    # keywords = read_csv('events.txt')
-    # print keywords
-   # print keywords
+    keywords = read_csv('candidates.txt')
+    print keywords
+
     #keywords = ["happy", "sad"]
    # print '|'.join(keywords).lower()
    # keyword_list = random.sample(keywords, 300) #track list
     #keyword_list = [keywords[i] for i in range(400)]
     #print keyword_list
 
-    keywords = ['traffic, accident, disabled vehicle, warning, emergency']
+    #keywords = ['traffic, accident, disabled vehicle, warning, emergency']
+    dir = 'data'
+    if not os.path.exists(dir):
+       os.makedirs(dir)
+
     twitterStream = Stream(auth, listener(start_time, time_limit))
     twitterStream.filter(track = keywords, languages=['en'])
 
