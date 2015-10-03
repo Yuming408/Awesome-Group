@@ -10,7 +10,9 @@ import sys
 import shutil
 
 def parse_json_file(input_file,keyword_list):
-    filenames = glob.glob(input_file)[1:3]
+    filenames = glob.glob(input_file)
+    print "number pf files:", len(filenames)
+   # filenames = glob.glob(input_file)[1:10]
     for file in filenames:
         parse_json_file_one_block(file, keyword_list)
 
@@ -257,14 +259,16 @@ def create_tweet_geo_table(cur, filename):
     cur.copy_from(file, 'tweet_geo_table', sep= ",")
 
 
-def print_out_table(cur, tablename):
-    cur.execute('SELECT * FROM {} limit 20'.format(tablename))
-    while(True):
-           row = cur.fetchone()
-           if row is not None:
-               print row
-           else:
-               break
+def print_out_table(rows):
+   # cur.execute('SELECT * FROM {} limit 20'.format(tablename))
+   #  while(True):
+   #         row = cur.fetchone()
+   #         if row is not None:
+   #             print row
+   #         else:
+   #             break
+   for row in rows:
+       print(row)
 
 def copy_to_DB():
     try:
@@ -286,11 +290,76 @@ def copy_to_DB():
        create_edge_table(cur,
                         './table/edge_table')
 
-       print_out_table(cur, 'tweet_base_table')
-       print_out_table(cur, 'user_base_table')
-       print_out_table(cur, 'tweet_tag_table')
-       print_out_table(cur, 'tweet_geo_table')
-       print_out_table(cur, 'edge_table')
+       ### distribution of candiates by tweets count
+       cur.execute("select keyword, count(*) as count "
+                   "from tweet_base_table "
+                   "where keyword <> 'None ' "
+                   "group by keyword "
+                   "order by count desc ")
+      # print_out_table(cur.fetchall())
+       print ('\n')
+
+       #### distribution of candiates by user count
+       sql = \
+           """
+           select keyword, count(user_id)
+           from
+           (select distinct LHS.user_id, keyword
+           from
+             (select user_id
+                    from user_base_table) as LHS
+             inner join
+             (select tweet_id,user_id,keyword
+                    from tweet_base_table
+                    where keyword <> 'None ')as RHS
+             on(LHS.user_id = RHS.user_id) ) as T
+             group by keyword
+           """
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
+
+       #### select geo_location
+       sql = \
+        """select LHS.tweet_id, keyword,
+                  coord1, coord2
+                  from
+           (select tweet_id, keyword
+               from tweet_base_table
+               where keyword <> 'None ') as LHS
+           inner join
+           (select tweet_id, coord1, coord2
+               from tweet_geo_table) as RHS
+           using(tweet_id)
+        """
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
+
+       #### select words
+       # cur.execute("select tweet_text"
+       #             "from tweet_base_table ")
+
+       sql = \
+           """
+           select keyword, time_zone, count(*) as count
+           from
+           (select keyword, time_zone
+           from
+             (select user_id, time_zone
+                    from user_base_table
+                    where time_zone <> 'None') as LHS
+             inner join
+             (select tweet_id,user_id,keyword
+                    from tweet_base_table
+                    where keyword <> 'None ')as RHS
+             on(LHS.user_id = RHS.user_id) ) as T
+             group by keyword, time_zone
+             order by keyword
+           """
+       cur.execute(sql)
+       print_out_table(cur.fetchall())
+      # print_out_table(cur, 'tweet_tag_table')
+      # print_out_table(cur, 'tweet_geo_table')
+      # print_out_table(cur, 'edge_table')
 
 
       # cur_tweet_base.execute('SELECT * FROM tweet_base_table')
@@ -314,12 +383,14 @@ def read_csv(file):
 
 def main():
     user_dir = 'table'
+    input_file = "./election_data/*.data"
+    keyword_list = read_csv('candidates.txt')
+
     if os.path.exists(user_dir):
        shutil.rmtree(user_dir)
     os.makedirs(user_dir)
-    input_file = "./election_data/*.data"
-    keyword_list = read_csv('candidates.txt')
     parse_json_file(input_file, keyword_list)
+
     copy_to_DB()
 
 if __name__ == '__main__':
