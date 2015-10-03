@@ -12,8 +12,9 @@ import shutil
 def parse_json_file(input_file,keyword_list):
     filenames = glob.glob(input_file)
     print "number pf files:", len(filenames)
-   # filenames = glob.glob(input_file)[1:10]
+    filenames = glob.glob(input_file)[32:len(filenames)]
     for file in filenames:
+        print file,
         parse_json_file_one_block(file, keyword_list)
 
 def parse_json_file_one_block(input, keyword_list):
@@ -47,8 +48,11 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
              ###### user_based in formation
              user_id = tweet['user']['id_str']
              #user_name = tweet['user']['name']
-             location = re.sub(',' , ' ',
-                               tweet['user']['location'].encode('utf-8','ignore'))
+             location = tweet['user']['location']
+             if location:
+                location = re.sub(',' , ' ',
+                               location.encode('utf-8','ignore'))
+
              #location = re.sub(" +", " ", location).lower()
              #user_description = tweet['user']['description']
             # print location
@@ -59,7 +63,10 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
              statuses_count = tweet['user']['statuses_count']
              user_created_at = tweet['user']['created_at']
              time_zone = tweet['user']['time_zone']
-             user_lang = tweet['user']['lang'].encode('utf-8', 'ignore')
+
+             user_lang = tweet['user']['lang']
+             if user_lang:
+                user_lang.encode('utf-8', 'ignore')
              user_mentions = tweet['entities']['user_mentions']
 
 
@@ -138,6 +145,12 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
                   #print str(e)
                   pass
 
+             except TypeError, e:
+                  pass
+
+             except AttributeError, e:
+                 pass
+
 def parse_text(text):
     """
     Read an txt file
@@ -189,7 +202,8 @@ def get_keyword(parsed_text, keyword_list):
 
 
 
-def create_tweet_base_table(cur, filename):
+def create_tweet_base_table(con, filename):
+    cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS tweet_base_table")
     file = open(filename)
     cur.execute("CREATE TABLE tweet_base_table( "
@@ -208,10 +222,12 @@ def create_tweet_base_table(cur, filename):
                   #           'favorite_count','lang'
                   #               ),
                   sep= ",")
+    con.commit()
 
 
 
-def create_user_base_table(cur, filename):
+def create_user_base_table(con, filename):
+    cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS user_base_table")
     file = open(filename)
     cur.execute("CREATE TABLE user_base_table( "
@@ -227,10 +243,11 @@ def create_user_base_table(cur, filename):
                    " user_lang varchar"
                    ");")
     cur.copy_from(file, 'user_base_table', sep= ",")
+    con.commit()
 
 
-
-def create_tweet_tag_table(cur, filename):
+def create_tweet_tag_table(con, filename):
+    cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS tweet_tag_table")
     file = open(filename)
     cur.execute("CREATE TABLE tweet_tag_table( "
@@ -238,8 +255,10 @@ def create_tweet_tag_table(cur, filename):
                    " hashtag varchar"
                    ");")
     cur.copy_from(file, 'tweet_tag_table', sep= ",")
+    con.commit()
 
-def create_edge_table(cur, filename):
+def create_edge_table(con, filename):
+    cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS edge_table")
     file = open(filename)
     cur.execute("CREATE TABLE edge_table( "
@@ -247,8 +266,10 @@ def create_edge_table(cur, filename):
                    " user_id_2 varchar"
                    ");")
     cur.copy_from(file, 'edge_table', sep= ",")
+    con.commit()
 
-def create_tweet_geo_table(cur, filename):
+def create_tweet_geo_table(con, filename):
+    cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS tweet_geo_table")
     file = open(filename)
     cur.execute("CREATE TABLE tweet_geo_table( "
@@ -256,7 +277,9 @@ def create_tweet_geo_table(cur, filename):
                    " coord1 numeric,"
                    " coord2 numeric"
                    ");")
+    cur.execute("commit()")
     cur.copy_from(file, 'tweet_geo_table', sep= ",")
+    con.commit()
 
 
 def print_out_table(rows):
@@ -270,6 +293,7 @@ def print_out_table(rows):
    for row in rows:
        print(row)
 
+
 def copy_to_DB():
     try:
        con = psycopg2.connect(database='tweets')
@@ -279,16 +303,112 @@ def copy_to_DB():
        print ver
 
 
-       create_tweet_base_table(cur,
+       create_tweet_base_table(con,
                             './table/tweet_base_table')
-       create_user_base_table(cur,
+       create_user_base_table(con,
                         './table/user_base_table')
-       create_tweet_tag_table(cur,
-                        './table/tweet_tag_table')
-       create_tweet_geo_table(cur,
-                        './table/tweet_geo_table')
-       create_edge_table(cur,
-                        './table/edge_table')
+       # create_tweet_tag_table(con,
+       #                  './table/tweet_tag_table')
+       #create_tweet_geo_table(con,
+       #                  './table/tweet_geo_table')
+       # create_edge_table(con,
+       #                  './table/edge_table')
+      #
+      #  ### distribution of candiates by tweets count
+      #  cur.execute("select keyword, count(*) as count "
+      #              "from tweet_base_table "
+      #              "where keyword <> 'None ' "
+      #              "group by keyword "
+      #              "order by count desc ")
+      # # print_out_table(cur.fetchall())
+      #  print ('\n')
+      #
+      #  #### distribution of candiates by user count
+      #  sql = \
+      #      """
+      #      select keyword, count(user_id)
+      #      from
+      #      (select distinct LHS.user_id, keyword
+      #      from
+      #        (select user_id
+      #               from user_base_table) as LHS
+      #        inner join
+      #        (select tweet_id,user_id,keyword
+      #               from tweet_base_table
+      #               where keyword <> 'None ')as RHS
+      #        on(LHS.user_id = RHS.user_id) ) as T
+      #        group by keyword
+      #      """
+      #  # cur.execute(sql)
+      #  # print_out_table(cur.fetchall())
+      #
+      #  #### select geo_location
+      #  sql = \
+      #   """select LHS.tweet_id, keyword,
+      #             coord1, coord2
+      #             from
+      #      (select tweet_id, keyword
+      #          from tweet_base_table
+      #          where keyword <> 'None ') as LHS
+      #      inner join
+      #      (select tweet_id, coord1, coord2
+      #          from tweet_geo_table) as RHS
+      #      using(tweet_id)
+      #   """
+      #  # cur.execute(sql)
+      #  # print_out_table(cur.fetchall())
+      #
+      #  #### select words
+      #  # cur.execute("select tweet_text"
+      #  #             "from tweet_base_table ")
+      #
+      #  sql = \
+      #      """
+      #      select keyword, time_zone, count(*) as count
+      #      from
+      #      (select keyword, time_zone
+      #      from
+      #        (select user_id, time_zone
+      #               from user_base_table
+      #               where time_zone <> 'None') as LHS
+      #        inner join
+      #        (select tweet_id,user_id,keyword
+      #               from tweet_base_table
+      #               where keyword <> 'None ')as RHS
+      #        on(LHS.user_id = RHS.user_id) ) as T
+      #        group by keyword, time_zone
+      #        order by keyword
+      #      """
+      #  cur.execute(sql)
+      #  print_out_table(cur.fetchall())
+      # # print_out_table(cur, 'tweet_tag_table')
+      # # print_out_table(cur, 'tweet_geo_table')
+      # # print_out_table(cur, 'edge_table')
+      #
+      #
+      # # cur_tweet_base.execute('SELECT * FROM tweet_base_table')
+
+
+    except psycopg2.DatabaseError, e:
+           print 'Error %s' % e
+           sys.exit(1)
+
+    finally:
+      if con:
+         con.close()
+
+
+def read_csv(file):
+    data = []
+    with open(file) as f:
+        for line in f:
+            data.append(line.strip('\n').lower())
+    return data
+
+def queries():
+    try:
+       con = psycopg2.connect(database='tweets')
+       cur = con.cursor()
 
        ### distribution of candiates by tweets count
        cur.execute("select keyword, count(*) as count "
@@ -297,7 +417,7 @@ def copy_to_DB():
                    "group by keyword "
                    "order by count desc ")
       # print_out_table(cur.fetchall())
-       print ('\n')
+      # print ('\n')
 
        #### distribution of candiates by user count
        sql = \
@@ -315,8 +435,8 @@ def copy_to_DB():
              on(LHS.user_id = RHS.user_id) ) as T
              group by keyword
            """
-       # cur.execute(sql)
-       # print_out_table(cur.fetchall())
+       cur.execute(sql)
+       print_out_table(cur.fetchall())
 
        #### select geo_location
        sql = \
@@ -331,8 +451,8 @@ def copy_to_DB():
                from tweet_geo_table) as RHS
            using(tweet_id)
         """
-       # cur.execute(sql)
-       # print_out_table(cur.fetchall())
+       #cur.execute(sql)
+       #print_out_table(cur.fetchall())
 
        #### select words
        # cur.execute("select tweet_text"
@@ -355,16 +475,12 @@ def copy_to_DB():
              group by keyword, time_zone
              order by keyword
            """
-       cur.execute(sql)
-       print_out_table(cur.fetchall())
-      # print_out_table(cur, 'tweet_tag_table')
-      # print_out_table(cur, 'tweet_geo_table')
-      # print_out_table(cur, 'edge_table')
+       #cur.execute(sql)
+       #print_out_table(cur.fetchall())
+
 
 
       # cur_tweet_base.execute('SELECT * FROM tweet_base_table')
-
-
     except psycopg2.DatabaseError, e:
            print 'Error %s' % e
            sys.exit(1)
@@ -374,24 +490,17 @@ def copy_to_DB():
          con.close()
 
 
-def read_csv(file):
-    data = []
-    with open(file) as f:
-        for line in f:
-            data.append(line.strip('\n').lower())
-    return data
-
 def main():
     user_dir = 'table'
     input_file = "./election_data/*.data"
     keyword_list = read_csv('candidates.txt')
 
-    if os.path.exists(user_dir):
-       shutil.rmtree(user_dir)
-    os.makedirs(user_dir)
-    parse_json_file(input_file, keyword_list)
-
-    copy_to_DB()
+    # if os.path.exists(user_dir):
+    #    shutil.rmtree(user_dir)
+    # os.makedirs(user_dir)
+    # parse_json_file(input_file, keyword_list)
+    #copy_to_DB()
+    queries()
 
 if __name__ == '__main__':
     main()
