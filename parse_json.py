@@ -277,7 +277,6 @@ def create_tweet_geo_table(con, filename):
                    " coord1 numeric,"
                    " coord2 numeric"
                    ");")
-    cur.execute("commit()")
     cur.copy_from(file, 'tweet_geo_table', sep= ",")
     con.commit()
 
@@ -309,8 +308,8 @@ def copy_to_DB():
                         './table/user_base_table')
        # create_tweet_tag_table(con,
        #                  './table/tweet_tag_table')
-       #create_tweet_geo_table(con,
-       #                  './table/tweet_geo_table')
+       create_tweet_geo_table(con,
+                        './table/tweet_geo_table')
        # create_edge_table(con,
        #                  './table/edge_table')
       #
@@ -422,7 +421,7 @@ def queries():
        #### distribution of candiates by user count
        sql = \
            """
-           select keyword, count(user_id)
+           select keyword, count(user_id) as count
            from
            (select distinct LHS.user_id, keyword
            from
@@ -434,11 +433,13 @@ def queries():
                     where keyword <> 'None ')as RHS
              on(LHS.user_id = RHS.user_id) ) as T
              group by keyword
+             order by count
            """
-       cur.execute(sql)
-       print_out_table(cur.fetchall())
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
 
        #### select geo_location
+
        sql = \
         """select LHS.tweet_id, keyword,
                   coord1, coord2
@@ -451,8 +452,8 @@ def queries():
                from tweet_geo_table) as RHS
            using(tweet_id)
         """
-       #cur.execute(sql)
-       #print_out_table(cur.fetchall())
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
 
        #### select words
        # cur.execute("select tweet_text"
@@ -473,10 +474,10 @@ def queries():
                     where keyword <> 'None ')as RHS
              on(LHS.user_id = RHS.user_id) ) as T
              group by keyword, time_zone
-             order by keyword
+             order by keyword, count desc
            """
-       #cur.execute(sql)
-       #print_out_table(cur.fetchall())
+       cur.execute(sql)
+       print_out_table(cur.fetchall())
 
 
 
