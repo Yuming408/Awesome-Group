@@ -48,7 +48,7 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
              ###### user_based in formation
              user_id = tweet['user']['id_str']
              user_name = tweet['user']['name']
-
+             user_screen_name = tweet['user']['screen_name']
 
              location = tweet['user']['location']
              if location:
@@ -80,11 +80,12 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
 
              try:
                 with open('./table/user_base_table', 'a+') as f:
-                  user_name = re.sub(',' , ' ', user_name).strip('\n').encode('utf-8','ignore')
-                  f.write("%s,%s, %d,%d,%d,%d,%d,%s,%s,%s \n" % \
+                  # user_name = re.sub(',' , ' ', user_name)\
+                  #     .strip('\n').replace.encode('utf-8','ignore')
+                  f.write("%s, %s, %d,%d,%d,%d,%d,%s,%s,%s \n" % \
                           (user_id,
                            #location,
-                           user_name,
+                           user_screen_name,
                            followers_count,
                            friends_count,
                            listed_count,
@@ -206,7 +207,7 @@ def create_tweet_base_table(con, filename):
     cur.execute("CREATE TABLE tweet_base_table( "
                    " tweet_id varchar,"
                    " user_id varchar, "
-                   " created_time varchar,"
+                   " created_time TIMESTAMP,"
                    " retweet_count integer,"
                    " favorite_count integer, "
                    " lang char(2), "
@@ -295,12 +296,12 @@ def copy_to_DB():
 
        create_tweet_base_table(con,
                             './table/tweet_base_table')
-       create_user_base_table(con,
-                        './table/user_base_table')
+       # create_user_base_table(con,
+       #                  './table/user_base_table')
        # create_tweet_tag_table(con,
        #                  './table/tweet_tag_table')
-       create_tweet_geo_table(con,
-                        './table/tweet_geo_table')
+       # create_tweet_geo_table(con,
+       #                  './table/tweet_geo_table')
        # create_edge_table(con,
        #                  './table/edge_table')
 
@@ -320,7 +321,6 @@ def read_csv(file):
         for line in f:
             data.append(line.strip('\n').lower())
     return data
-
 
 
 def queries():
@@ -388,9 +388,29 @@ def queries():
        # with open('./result/tweet_geo.csv', 'w') as f:
        #        cur.copy_expert(outputquery, f)
 
-       #### select words
-       # cur.execute("select tweet_text"
-       #             "from tweet_base_table ")
+       #### select words for trump
+       # sql = \
+       #     """
+       #     select tweet_text
+       #     from tweet_base_table
+       #     where keyword = 'donald trump '
+       #     """
+       # cur.execute(sql)
+       # outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
+       # with open('./result/text_trump.csv', 'w') as f:
+       #       cur.copy_expert(outputquery, f)
+
+        ##### select words for
+       # sql = \
+       #     """
+       #     select tweet_text
+       #     from tweet_base_table
+       #     where keyword = 'hillary clinton '
+       #     """
+       # cur.execute(sql)
+       # outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
+       # with open('./result/text_hillary.csv', 'w') as f:
+       #       cur.copy_expert(outputquery, f)
 
 
        #### time_zone
@@ -447,15 +467,146 @@ def queries():
        # with open('./result/user_time_zone_count.csv', 'w') as f:
        #        cur.copy_expert(outputquery, f)
 
-       sql = \
-         """
-         select user_id, user_name from
-            user_base_table
-            where user_id in ('3532804813','334028220','3032869619')
+       ##### track the count for top 5 candiates
 
-         """
+           # donald trump 51227
+       # hillary clinton ,11953
+       # carly fiorina ,8479
+       #ben carson ,8107
+       # jeb bush ,6808
+       # bernie sanders ,6473
+       # ted cruz ,5362
+
+       sql = \
+       """
+       select LHS.date, LHS.count as Donald_Trump,
+              RHS1.count as Hillary_Clinton,
+              RHS2.count as Carly_Fiorina,
+              RHS3.count as Ben_Carson,
+              RHS4.count as Jeb_Bush,
+              RHS5.count as Bernie_Sanders,
+              RHS6.count as Ted_Cruz
+       from
+       (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'donald trump ') as LHS
+        left join
+        (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'hillary clinton ') as RHS1
+        on (LHS.date = RHS1.date)
+        left join
+        (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'carly fiorina ') as RHS2
+        on (LHS.date = RHS2.date)
+        left join
+        (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'ben carson ') as RHS3
+        on (LHS.date = RHS3.date)
+         left join
+        (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'jeb bush ') as RHS4
+        on (LHS.date = RHS4.date)
+        left join
+        (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'bernie sanders ') as RHS5
+        on (LHS.date = RHS5.date)
+        left join
+        (SELECT keyword,
+              date,
+              sum(count)
+              over (partition by keyword
+                    order by date ASC
+                    Rows between unbounded preceding and current row) as count
+       from (select keyword,
+             count(*) as count,
+             date_trunc('hour',created_time) as date
+             from tweet_base_table
+             group by date,keyword) as T
+        where keyword = 'ted cruz ') as RHS6
+        on (LHS.date = RHS6.date)
+
+
+
+       """
+
        cur.execute(sql)
        print_out_table(cur.fetchall())
+       outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
+       with open('./result/count_time_trend.csv', 'w') as f:
+              cur.copy_expert(outputquery, f)
+
+
+
+
+       ##### other quries
+       # sql = \
+       #   """
+       #   select distinct user_id, user_name from
+       #      user_base_table
+       #      where user_id in ('3532804813','334028220','3032869619')
+       #
+       #   """
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
 
 
 
@@ -476,16 +627,16 @@ def main():
     keyword_list = read_csv('candidates.txt')
 
     #
-    if os.path.exists(user_dir):
-       shutil.rmtree(user_dir)
-    os.makedirs(user_dir)
-    parse_json_file(input_file, keyword_list)
-
-    copy_to_DB()
+    # if os.path.exists(user_dir):
+    #    shutil.rmtree(user_dir)
+    # os.makedirs(user_dir)
+    # parse_json_file(input_file, keyword_list)
     #
-    # if not os.path.exists(result_dir):
-    #    os.makedirs(result_dir)
-    # queries()
+    #copy_to_DB()
+    #
+    if not os.path.exists(result_dir):
+       os.makedirs(result_dir)
+    queries()
 
 if __name__ == '__main__':
     main()
