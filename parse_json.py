@@ -47,7 +47,9 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
 
              ###### user_based in formation
              user_id = tweet['user']['id_str']
-             #user_name = tweet['user']['name']
+             user_name = tweet['user']['name']
+
+
              location = tweet['user']['location']
              if location:
                 location = re.sub(',' , ' ',
@@ -78,11 +80,11 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
 
              try:
                 with open('./table/user_base_table', 'a+') as f:
-                  #print location.encode('ascii')
-                  #print(user_id, str(location),str(user_created_at), str(time_zone), str(user_lang))
-                  f.write("%s,%d,%d,%d,%d,%d,%s,%s,%s \n" % \
+                  user_name = re.sub(',' , ' ', user_name).strip('\n').encode('utf-8','ignore')
+                  f.write("%s,%s, %d,%d,%d,%d,%d,%s,%s,%s \n" % \
                           (user_id,
                            #location,
+                           user_name,
                            followers_count,
                            friends_count,
                            listed_count,
@@ -131,10 +133,7 @@ def update_table(tweet,tweet_tag, node_node, keyword_list):
                       coords = geo['coordinates']
                       f.write("%s, %f,%f\n" % (tweet_id, coords[0], coords[1]))
 
-                # with open('./table/tweet_text_table', 'a+') as f:
-                #       text = str(parse_text(tweet_text)).strip()
-                #      # print text
-                #       f.write("%s,%s\n" % (user_id, text))
+
 
 
              except UnicodeDecodeError, e:
@@ -231,6 +230,7 @@ def create_user_base_table(con, filename):
     cur.execute("CREATE TABLE user_base_table( "
                    " user_id varchar,"
                    #" location varchar, "
+                   " user_name varchar, "
                    " followers_count integer,"
                    " friends_count integer,"
                    " listed_count integer, "
@@ -307,6 +307,7 @@ def copy_to_DB():
     except psycopg2.DatabaseError, e:
            print 'Error %s' % e
            sys.exit(1)
+
 
     finally:
       if con:
@@ -411,8 +412,8 @@ def queries():
              having count(*) > 10
              order by keyword, count desc
            """
-       cur.execute(sql)
-       print_out_table(cur.fetchall())
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
        # outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
        # with open('./result/user_time_zone.csv', 'w') as f:
        #        cur.copy_expert(outputquery, f)
@@ -446,6 +447,16 @@ def queries():
        # with open('./result/user_time_zone_count.csv', 'w') as f:
        #        cur.copy_expert(outputquery, f)
 
+       sql = \
+         """
+         select user_id, user_name from
+            user_base_table
+            where user_id in ('3532804813','334028220','3032869619')
+
+         """
+       cur.execute(sql)
+       print_out_table(cur.fetchall())
+
 
 
       # cur_tweet_base.execute('SELECT * FROM tweet_base_table')
@@ -464,17 +475,17 @@ def main():
     input_file = "./election_data/*.data"
     keyword_list = read_csv('candidates.txt')
 
+    #
+    if os.path.exists(user_dir):
+       shutil.rmtree(user_dir)
+    os.makedirs(user_dir)
+    parse_json_file(input_file, keyword_list)
 
-    # if os.path.exists(user_dir):
-    #    shutil.rmtree(user_dir)
-    # os.makedirs(user_dir)
-    # parse_json_file(input_file, keyword_list)
-
-    #copy_to_DB()
-
-    if not os.path.exists(result_dir):
-       os.makedirs(result_dir)
-    queries()
+    copy_to_DB()
+    #
+    # if not os.path.exists(result_dir):
+    #    os.makedirs(result_dir)
+    # queries()
 
 if __name__ == '__main__':
     main()
