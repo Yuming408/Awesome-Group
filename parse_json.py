@@ -382,11 +382,11 @@ def queries():
                from tweet_geo_table) as RHS
            using(tweet_id)
         """
-       # cur.execute(sql)
-       # print_out_table(cur.fetchall())
-       # outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
-       # with open('./result/tweet_geo.csv', 'w') as f:
-       #        cur.copy_expert(outputquery, f)
+       cur.execute(sql)
+       print_out_table(cur.fetchall())
+       outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
+       with open('./result/tweet_geo.csv', 'w') as f:
+              cur.copy_expert(outputquery, f)
 
        #### select words for trump
        # sql = \
@@ -588,11 +588,11 @@ def queries():
 
        """
 
-       cur.execute(sql)
-       print_out_table(cur.fetchall())
-       outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
-       with open('./result/count_time_trend.csv', 'w') as f:
-              cur.copy_expert(outputquery, f)
+       # cur.execute(sql)
+       # print_out_table(cur.fetchall())
+       # outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
+       # with open('./result/count_time_trend.csv', 'w') as f:
+       #        cur.copy_expert(outputquery, f)
 
 
 
