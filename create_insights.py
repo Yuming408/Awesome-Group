@@ -46,8 +46,8 @@ def word_cloud(filename, name):
                       height=1400
                      ).generate(words_filtered)
 
-    #plt.imshow(wordcloud.recolor(color_func=grey_color_func, random_state=3))
-    plt.imshow(wordcloud.recolor(random_state=3))
+    plt.imshow(wordcloud.recolor(color_func=grey_color_func, random_state=3))
+    #plt.imshow(wordcloud.recolor(random_state=3))
 
    # plt.imshow(wordcloud)
     plt.axis('off')
@@ -70,7 +70,6 @@ def time_trend(filename):
 
 
 def main():
-
 
     word_cloud('./result/text_trump.csv', 'donald trump')
     word_cloud('./result/text_hillary.csv', 'hillary clinton')
